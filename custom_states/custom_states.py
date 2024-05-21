@@ -17,6 +17,10 @@ class MyStates:
     contract_begins = 7
     registration_address = 8
     telephone = 9
+    contract_ends = 10
+    dismissal = 11
+    make_it_cool = 12
+    zaebis = 13
 
 
 

@@ -1,10 +1,11 @@
 import re
-
+from custom_scripts.format_message_info import make_it_beautiful
 from settings.message import MESSAGES
 from settings import config
 from handlers.handler import Handler
 from custom_states.custom_states import MyStates, user_states
 from custom_scripts.script import user_data, MakeDocs
+
 
 class HandlerAllText(Handler):
     def __init__(self,bot):
@@ -33,7 +34,9 @@ class HandlerAllText(Handler):
         self.bot.send_message(message.chat.id, f'Выбрано {message.text}',
                               reply_markup = self.keyboards.info_menu())
 
-
+    def cool_button(self, message):
+        self.bot.send_message(message.chat.id, f'Сделать заебись?',
+                              reply_markup = self.keyboards.make_it_great())
 
     def handle(self):
         @self.bot.message_handler(func = lambda message: message.text == 'Вернуться в начало')
@@ -62,15 +65,26 @@ class HandlerAllText(Handler):
                 user_states[message.chat.id] = MyStates.name_latin
                 user_data[message.chat.id] = {'choice' : 'recruitment_minsk'}
                 self.bot.send_message(message.chat.id, "Введите ФИО работника латиницей через пробел:")
+            if message.text == config.KEYBOARD['Dismissal']:
+                self.action_selected(message)
+                user_states[message.chat.id] = MyStates.name_latin
+                user_data[message.chat.id] = {'choice' : 'dismissal'}
+                self.bot.send_message(message.chat.id, "Введите ФИО работника латиницей через пробел:")
 
         @self.bot.message_handler(func=lambda message: message.chat.id in user_states)
         def handle_stated_messages(message):
+            docs = MakeDocs(user_data[message.chat.id])
             state = user_states[message.chat.id]
             if state == MyStates.name_latin:
                 if re.fullmatch(self.name_latin_pattern, message.text):
                     user_data[message.chat.id]['name_latin'] = message.text
-                    user_states[message.chat.id] = MyStates.name_cyrill
-                    self.bot.send_message(message.chat.id, "Введите ФИО работника кириллицей через пробел:")
+                    if docs.driver_exist():
+                        self.bot.send_message(message.chat.id, "Данный водитель есть в базе, введите дату заключения контракта в формате ДД.ММ.ГГГГ:")
+                        docs.get_context_from_existing_driver()
+                        user_states[message.chat.id] = MyStates.contract_begins
+                    else:
+                        user_states[message.chat.id] = MyStates.name_cyrill
+                        self.bot.send_message(message.chat.id, "Введите ФИО работника кириллицей через пробел:")
                 else:
                     self.bot.send_message(message.chat.id, "Неверный формат имени!")
                     self.bot.send_message(message.chat.id, "Введите ФИО работника латиницей через пробел:")
@@ -120,12 +134,23 @@ class HandlerAllText(Handler):
                     if  user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk']:
                         user_states[message.chat.id] = MyStates.registration_address
                         self.bot.send_message(message.chat.id, "Введите адрес регистрации работника:")
+                    elif user_data[message.chat.id]['choice'] == 'dismissal':
+                        user_states[message.chat.id] = MyStates.contract_ends
+                        self.bot.send_message(message.chat.id, "Введите дату расторжения контракта в формате ДД.ММ.ГГГГ::")
                     else:
-                        user_states[message.chat.id] = None
-                        self.bot.send_message(message.chat.id, f'Введены следующие данные:\n{user_data[message.chat.id]}')
+                        self.bot.send_message(message.chat.id, make_it_beautiful(user_data[message.chat.id]), parse_mode='HTML', reply_markup=self.keyboards.make_it_great())
+                        user_states[message.chat.id] = MyStates.make_it_cool
                 else:
                     self.bot.send_message(message.chat.id, "Неверный формат даты заключения контракта!")
                     self.bot.send_message(message.chat.id, "Введите дату заключения контракта в формате ДД.ММ.ГГГГ:")
+            elif state == MyStates.contract_ends:
+                if re.fullmatch(self.date_pattern, message.text):
+                    user_data[message.chat.id]['contract_ends'] = message.text
+                    self.bot.send_message(message.chat.id, make_it_beautiful(user_data[message.chat.id]), parse_mode='HTML', reply_markup=self.keyboards.make_it_great())
+                    user_states[message.chat.id] = MyStates.make_it_cool
+                else:
+                    self.bot.send_message(message.chat.id, "Неверный формат даты расторжения контракта!")
+                    self.bot.send_message(message.chat.id, "Введите дату расторжения контракта в формате ДД.ММ.ГГГГ:")
             elif state == MyStates.registration_address and  user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk']:
                 user_data[message.chat.id]['registration_address'] = message.text
                 user_states[message.chat.id] = MyStates.telephone
@@ -133,21 +158,34 @@ class HandlerAllText(Handler):
             elif state == MyStates.telephone  and  user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk']:
                 if re.fullmatch(self.telephone_number_pattern, message.text):
                     user_data[message.chat.id]['telephone'] = message.text
-                    user_states[message.chat.id] = MyStates.birth_date
-                    user_states[message.chat.id] = None
-                    self.bot.send_message(message.chat.id, f'Введены следующие данные:\n{user_data[message.chat.id]}')
+                    self.bot.send_message(message.chat.id, make_it_beautiful(user_data[message.chat.id]), parse_mode='HTML', reply_markup=self.keyboards.make_it_great())
+                    user_states[message.chat.id] = MyStates.make_it_cool
                 else:
                     self.bot.send_message(message.chat.id, "Неверный формат номера телефона работника!")
                     self.bot.send_message(message.chat.id, "Введите номер телефона работника в формате +375123456789:")
-            if len(user_data[message.chat.id].items()) == 8 and not user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk']:
+            elif state == MyStates.make_it_cool:
+                print('make it cool')
+                user_states[message.chat.id] = MyStates.zaebis
+            if len(user_data[message.chat.id].items()) == 8 and \
+                    not user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk', 'dismissal']\
+                    and user_states[message.chat.id] == MyStates.zaebis:
                 print('делаем договор и ходатайство')
-                docs = MakeDocs(user_data[message.chat.id])
                 if docs.make_turkmenistan_invite():
                     self.bot.send_message(message.chat.id, f"Созданы документы на имя {user_data[message.chat.id]['name_cyrill']}\nОтправляю...")
                     for filepath in docs.filepaths:
-                        self.bot.send_document(message.chat.id, open(filepath, 'rb'))
-            elif len(user_data[message.chat.id].items()) == 10:
-                docs = MakeDocs(user_data[message.chat.id])
+                        self.bot.send_document(message.chat.id, open(filepath, 'rb'), reply_markup=self.keyboards.info_menu())
+                        user_states[message.chat.id] = None
+            elif len(user_data[message.chat.id].items()) == 10 and user_states[message.chat.id] == MyStates.zaebis:
                 if docs.make_recruitment_optional():
                     self.bot.send_message(message.chat.id, f"Созданы документы на имя {user_data[message.chat.id]['name_cyrill']}\nОтправляю...")
-
+                    for filepath in docs.filepaths:
+                        self.bot.send_document(message.chat.id, open(filepath, 'rb'), reply_markup=self.keyboards.info_menu())
+                    user_states[message.chat.id] = None
+            elif user_data[message.chat.id]['choice'] == 'dismissal' and len(user_data[message.chat.id]) == 9 \
+                    and user_states[message.chat.id] == MyStates.zaebis:
+                print('Увольняем к хуям')
+                if docs.make_dismissal_notification():
+                    self.bot.send_message(message.chat.id, f"Создано уведомление об увольнении на имя {user_data[message.chat.id]['name_cyrill']}\nОтправляю...")
+                    for filepath in docs.filepaths:
+                        self.bot.send_document(message.chat.id, open(filepath, 'rb'), reply_markup=self.keyboards.info_menu())
+                    user_states[message.chat.id] = None

@@ -30,6 +30,14 @@ class Keyboards:
     def set_btn(self, name, step=0, quantity=0):
         return KeyboardButton(config.KEYBOARD[name])
 
+    def make_it_great(self):
+        self.markup = ReplyKeyboardMarkup(True, True)
+        itm_btn_1 = self.set_btn('Make it cool')
+        itm_btn_2 = self.set_btn('<<')
+        self.markup.row(itm_btn_1)
+        self.markup.row(itm_btn_2)
+        return self.markup
+
     @staticmethod
     def remove_menu():
         return ReplyKeyboardRemove()

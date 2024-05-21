@@ -14,12 +14,10 @@ class HandlerCommands(Handler):
         """
         self.bot.send_message(message.chat.id,
                               f'{message.from_user.first_name},'
-                              f' здарова, заебал!',
+                              f' здарова, как сам?',
                               reply_markup=self.keyboards.start_menu())
 
     def handle(self):
-        # обработчик(декоратор) сообщений,
-        # который обрабатывает входящие /start команды.
         @self.bot.message_handler(commands=['start'])
         def handle(message):
             if message.text == '/start':

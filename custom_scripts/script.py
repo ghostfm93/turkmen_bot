@@ -2,12 +2,15 @@ import os
 from sys import exc_info
 from docxtpl import DocxTemplate
 import json
+from docx import Document
 from docx2pdf import convert
 from datetime import datetime, timedelta
 user_data = {}
 class MakeDocs:
     def __init__(self, context:dict):
         self.context = context
+        self.contract_filename = ''
+        self.petition_filename = ''
         self.filepaths = []
         self.months = {
                         '01': 'января',
@@ -111,6 +114,28 @@ class MakeDocs:
             self.filepaths.append(fr"./drivers/{self.context['name_latin']}/Уведомление УВД миграция {name}.docx")
             print(f"Создано уведомление УВД миграции на {self.context['name_latin']}")
 
+
+    def make_dismissal_notification(self):
+        '''делаем уведомление'''
+        doc = DocxTemplate("./templates/dismissal_tpl.docx")
+        self.context.update({'from_day': self.context['contract_begins'].split('.')[0]})
+        self.context.update({'from_month': self.context['contract_begins'].split('.')[1]})
+        self.context.update({'from_month_text' : self.months[self.context['from_month']]})
+        self.context.update({'from_year': self.context['contract_begins'].split('.')[2]})
+        self.context.update({'from_day_ends': self.context['contract_ends'].split('.')[0]})
+        self.context.update({'from_month_ends': self.context['contract_ends'].split('.')[1]})
+        self.context.update({'from_month_text_ends' : self.months[self.context['from_month_ends']]})
+        self.context.update({'from_year_ends': self.context['contract_ends'].split('.')[2]})
+        name = self.context['name_cyrill'].split(' ')[0]
+        doc.render(self.context)
+        os.makedirs(fr"./drivers/{self.context['name_latin']}", exist_ok = True)
+        doc.save(fr"./drivers/{self.context['name_latin']}/Уведомление УВД миграция увольнение {name}.docx")
+        # если сохранение успешно - выводим об этом уведомление
+        if doc.is_saved:
+            self.filepaths.append(fr"./drivers/{self.context['name_latin']}/Уведомление УВД миграция увольнение {name}.docx")
+            print(f"Создано уведомление УВД миграции об увольнении {self.context['name_latin']}")
+            return True
+
     def make_statement(self):
         '''делаем заявление'''
         doc = DocxTemplate("./templates/statement_tpl.docx")
@@ -130,7 +155,7 @@ class MakeDocs:
             self.write_contracts_data(data)
             return True
         except Exception:
-            print(Exception.args)
+            print(exc_info())
 
     def make_recruitment_optional(self):
         data = self.read_contracts_data()
@@ -141,4 +166,36 @@ class MakeDocs:
             self.write_contracts_data(data)
             return True
         except Exception:
-            print(Exception.args)
+            print(exc_info())
+
+    def make_dismissal(self):
+        try:
+            self.make_dismissal_notification()
+            return True
+        except Exception:
+            print(exc_info())
+
+
+    def driver_exist(self):
+        flag = []
+        if self.context["name_latin"] in  os.listdir('drivers'):
+            print('Папка с водителем есть')
+            for file in os.listdir(f'drivers/{self.context["name_latin"]}'):
+                if file.endswith(f'{self.context["name_latin"]}.docx') and file.startswith('Трудовой договор'):
+                    print('Договор есть')
+                    self.contract_filename = file
+                    flag.append('Договор')
+                if file.endswith(f'{self.context["name_latin"].split(" ")[0].upper()}.docx') and file.startswith('Ходатайство'):
+                    print('Ходатайство есть')
+                    self.petition_filename = file
+                    flag.append('Ходатайство')
+        return 'Договор' in flag and 'Ходатайство' in flag
+
+    def get_context_from_existing_driver(self):
+        doc_contract = Document(f'drivers/{self.context["name_latin"]}/{self.contract_filename}')
+        doc_petition = Document(f'drivers/{self.context["name_latin"]}/{self.petition_filename}')
+        self.context['name_cyrill'] = doc_contract.tables[1].column_cells(2)[0].text.split('\n')[1]
+        self.context['birth_date'] = doc_petition.tables[1].column_cells(0)[2].text.split('\n')[1]
+        self.context['passport_number'] = doc_petition.tables[1].column_cells(0)[3].text.split('\n')[1]
+        self.context['passport_given'] = doc_petition.tables[1].column_cells(2)[3].text.split('\n')[1].split('-')[0]
+        self.context['passport_ends'] = doc_petition.tables[1].column_cells(2)[3].text.split('\n')[1].split('-')[1]
