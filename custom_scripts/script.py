@@ -32,12 +32,14 @@ class MakeDocs:
         '''читаем номера договоров из файла'''
         with open('settings/contracts.json', 'r') as js_file:
             contracts_data = json.load(js_file)
+            print('Считали данные о договорах из файла')
             return contracts_data
 
     def write_contracts_data(self, data):
         '''записываем изменения номеров договоров в файл'''
         with open('settings/contracts.json', 'w') as js_file:
             json.dump(data, js_file)
+            print('Записали данные о договорах в файл')
 
     def make_petition(self, data):
         '''делаем ходатайство'''
@@ -153,6 +155,7 @@ class MakeDocs:
             self.make_contract(data)
             self.make_petition(data)
             self.write_contracts_data(data)
+            print('_______________________________________________')
             return True
         except Exception:
             print(exc_info())
@@ -164,6 +167,7 @@ class MakeDocs:
             self.make_statement()
             self.make_notification()
             self.write_contracts_data(data)
+            print('_______________________________________________')
             return True
         except Exception:
             print(exc_info())
@@ -171,6 +175,7 @@ class MakeDocs:
     def make_dismissal(self):
         try:
             self.make_dismissal_notification()
+            print('_______________________________________________')
             return True
         except Exception:
             print(exc_info())
@@ -179,16 +184,15 @@ class MakeDocs:
     def driver_exist(self):
         flag = []
         if self.context["name_latin"] in  os.listdir('drivers'):
-            print('Папка с водителем есть')
             for file in os.listdir(f'drivers/{self.context["name_latin"]}'):
                 if file.endswith(f'{self.context["name_latin"]}.docx') and file.startswith('Трудовой договор'):
-                    print('Договор есть')
                     self.contract_filename = file
                     flag.append('Договор')
                 if file.endswith(f'{self.context["name_latin"].split(" ")[0].upper()}.docx') and file.startswith('Ходатайство'):
-                    print('Ходатайство есть')
                     self.petition_filename = file
                     flag.append('Ходатайство')
+        if 'Договор' in flag and 'Ходатайство' in flag:
+            print(f'Нашли в системе {self.context["name_latin"]}')
         return 'Договор' in flag and 'Ходатайство' in flag
 
     def get_context_from_existing_driver(self):
@@ -199,3 +203,4 @@ class MakeDocs:
         self.context['passport_number'] = doc_petition.tables[1].column_cells(0)[3].text.split('\n')[1]
         self.context['passport_given'] = doc_petition.tables[1].column_cells(2)[3].text.split('\n')[1].split('-')[0]
         self.context['passport_ends'] = doc_petition.tables[1].column_cells(2)[3].text.split('\n')[1].split('-')[1]
+        print('Подсосали данные из существующих документов')
