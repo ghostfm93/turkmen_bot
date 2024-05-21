@@ -1,0 +1,6 @@
+docx==0.2.4
+docx2pdf==0.1.8
+docxtpl==0.17.0
+pyTelegramBotAPI==4.13.0
+pyTelegramBotAPI==4.18.1
+python_docx==1.1.2
