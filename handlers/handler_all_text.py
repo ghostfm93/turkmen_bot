@@ -164,7 +164,6 @@ class HandlerAllText(Handler):
                     self.bot.send_message(message.chat.id, "Неверный формат номера телефона работника!")
                     self.bot.send_message(message.chat.id, "Введите номер телефона работника в формате +375123456789:")
             elif state == MyStates.make_it_cool:
-                print('make it cool')
                 user_states[message.chat.id] = MyStates.zaebis
             if len(user_data[message.chat.id].items()) == 8 and \
                     not user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk', 'dismissal']\

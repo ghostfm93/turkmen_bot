@@ -58,7 +58,7 @@ class MakeDocs:
         # если сохранение успешно - выводим об этом уведомление и увеличиваем номер ходатайства на 1 в нашем файле в облаке
         if doc.is_saved:
             try:
-                # convert(fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.docx", fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.pdf")
+                convert(filename, fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.pdf")
                 print(f'Создано ходатайство на {self.context["name_cyrill"]}')
                 self.filepaths.append(filename)
                 # self.filepaths.append(filename[:-4]+'pdf')
