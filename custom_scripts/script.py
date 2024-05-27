@@ -54,14 +54,15 @@ class MakeDocs:
         doc = DocxTemplate("./templates/petition_tpl.docx")
         doc.render(self.context)
         filename = fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.docx"
+        pdf_filename = filename.replace('.docx', '.pdf')
         doc.save(filename)
         # если сохранение успешно - выводим об этом уведомление и увеличиваем номер ходатайства на 1 в нашем файле в облаке
         if doc.is_saved:
             try:
-                convert(filename, fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.pdf")
+                convert(filename, pdf_filename)
                 print(f'Создано ходатайство на {self.context["name_cyrill"]}')
                 self.filepaths.append(filename)
-                # self.filepaths.append(filename[:-4]+'pdf')
+                self.filepaths.append(pdf_filename)
                 data['petition_number'] += 1
                 return True
             except Exception as err:
