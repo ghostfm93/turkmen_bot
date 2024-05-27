@@ -10,6 +10,7 @@ def make_it_beautiful(context:dict)->str:
                       'contract_ends' : 'Дата окончания контракта',
                       'registration_address' : 'Адрес регистрации',
                       'telephone' : 'Номер телефона',
+                      'ogim' : 'Отдел по гражданству и миграции',
                       }
     out_string = ''
     for key, value in context.items():

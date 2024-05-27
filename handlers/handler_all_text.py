@@ -158,13 +158,18 @@ class HandlerAllText(Handler):
             elif state == MyStates.telephone  and  user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk']:
                 if re.fullmatch(self.telephone_number_pattern, message.text):
                     user_data[message.chat.id]['telephone'] = message.text
-                    self.bot.send_message(message.chat.id, make_it_beautiful(user_data[message.chat.id]), parse_mode='HTML', reply_markup=self.keyboards.make_it_great())
-                    user_states[message.chat.id] = MyStates.make_it_cool
+                    self.bot.send_message(message.chat.id, "Введите название Отдела по гражданству и миграции:")
+                    user_states[message.chat.id] = MyStates.ogim
                 else:
                     self.bot.send_message(message.chat.id, "Неверный формат номера телефона работника!")
                     self.bot.send_message(message.chat.id, "Введите номер телефона работника в формате +375123456789:")
+            elif state == MyStates.ogim  and  user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk']:
+                user_data[message.chat.id]['ogim'] = message.text
+                self.bot.send_message(message.chat.id, make_it_beautiful(user_data[message.chat.id]), parse_mode='HTML', reply_markup=self.keyboards.make_it_great())
+                user_states[message.chat.id] = MyStates.make_it_cool
             elif state == MyStates.make_it_cool:
                 user_states[message.chat.id] = MyStates.zaebis
+                print(len(user_data[message.chat.id].items()))
             if len(user_data[message.chat.id].items()) == 8 and \
                     not user_data[message.chat.id]['choice'] in ['recruitment', 'recruitment_minsk', 'dismissal']\
                     and user_states[message.chat.id] == MyStates.zaebis:
@@ -174,13 +179,13 @@ class HandlerAllText(Handler):
                     for filepath in docs.filepaths:
                         self.bot.send_document(message.chat.id, open(filepath, 'rb'), reply_markup=self.keyboards.info_menu())
                         user_states[message.chat.id] = None
-            elif len(user_data[message.chat.id].items()) == 10 and user_states[message.chat.id] == MyStates.zaebis:
+            elif len(user_data[message.chat.id].items()) == 11 and user_states[message.chat.id] == MyStates.zaebis:
                 if docs.make_recruitment_optional():
                     self.bot.send_message(message.chat.id, f"Созданы документы на имя {user_data[message.chat.id]['name_cyrill']}\nОтправляю...")
                     for filepath in docs.filepaths:
                         self.bot.send_document(message.chat.id, open(filepath, 'rb'), reply_markup=self.keyboards.info_menu())
                     user_states[message.chat.id] = None
-            elif user_data[message.chat.id]['choice'] == 'dismissal' and len(user_data[message.chat.id]) == 9 \
+            elif user_data[message.chat.id]['choice'] == 'dismissal' and len(user_data[message.chat.id]) == 10 \
                     and user_states[message.chat.id] == MyStates.zaebis:
                 print('Увольняем к хуям')
                 if docs.make_dismissal_notification():

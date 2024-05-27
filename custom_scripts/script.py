@@ -2,9 +2,11 @@ import os
 from sys import exc_info
 from docxtpl import DocxTemplate
 import json
+from openpyxl import load_workbook
 from docx import Document
 from docx2pdf import convert
 from datetime import datetime, timedelta
+import pythoncom
 user_data = {}
 class MakeDocs:
     def __init__(self, context:dict):
@@ -54,16 +56,17 @@ class MakeDocs:
         doc = DocxTemplate("./templates/petition_tpl.docx")
         doc.render(self.context)
         filename = fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.docx"
-        pdf_filename = filename.replace('.docx', '.pdf')
         doc.save(filename)
         # если сохранение успешно - выводим об этом уведомление и увеличиваем номер ходатайства на 1 в нашем файле в облаке
         if doc.is_saved:
+            print(f'Создано ходатайство на {self.context["name_cyrill"]}')
+            data['petition_number'] += 1
+            self.filepaths.append(fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.docx")
             try:
-                convert(filename, pdf_filename)
-                print(f'Создано ходатайство на {self.context["name_cyrill"]}')
-                self.filepaths.append(filename)
-                self.filepaths.append(pdf_filename)
-                data['petition_number'] += 1
+                pythoncom.CoInitialize()
+                convert(fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.docx",
+                        fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.pdf")
+                self.filepaths.append(fr"./drivers/{self.context['name_latin']}/Ходатайство-2024 {self.context['first_name']}.pdf")
                 return True
             except Exception as err:
                 print('Хуйня случилась при конвертации', exc_info())
@@ -150,6 +153,52 @@ class MakeDocs:
             self.filepaths.append(fr"./drivers/{self.context['name_latin']}/Заявление {name}.docx")
             print(f"Создано заявление на {self.context['name_latin']}")
 
+    def make_dcm_petition(self, data):
+        '''делаем ходатайство в ОГИМ'''
+        #открываем шаблон из корня и единственный лист в нём
+        wb = load_workbook('test.xlsx')
+        sheet = wb['стр.1']
+        #это ссаные индексы колонок и строк в этом шаблоне. делали явно какие-то пидарасы
+        indexes = {
+            'name_latin': {14: range(2, 113, 4)},
+            'name_cyrill': {16: range(2, 113, 4)},
+            'birth_date': {18: [17, 24, 41]},
+            'passport_number': {26: [10, 59, 64, 69, 74, 79, 84, 89]},
+            'passport_given': {27: [12, 22, 46]},
+            'passport_ends': {27: [76, 86, 110]},
+            'registration_address': {35: [13, ]},
+            'telephone': {37: [2, ]},
+            'ogim': {5: [43, ]},
+            'ogim_petition_number': {5: [6, ]},
+        }
+        self.context['ogim_petition_number'] = data['ogim_petition_number']
+        #идём перебором по этим шаблонам, по пути подъедаем инфу из контекста
+        for cat, ind in indexes.items():
+            curr_val = self.context[cat]
+            if cat in ['birth_date', 'passport_given', 'passport_ends']:
+                curr_val = curr_val.split('.')
+            for string, rows in ind.items():
+                #итерируемся по пронумерованным номерам столбцов, попутно по этому индексу добавляем значения из контекста
+                for num, i in enumerate(rows):
+                    #если видим, что клетка для инфы - одна - вставляем туда значение из контекста целиком
+                    if len(rows) == 1:
+                        sheet.cell(row = string, column = i).value = curr_val
+                    #иначе дрочим по одной букве
+                    elif num < len(curr_val):
+                        if isinstance(curr_val[num], str):
+                            sheet.cell(row = string, column = i).value = curr_val[num].upper()
+                        else:
+                            sheet.cell(row = string, column = i).value = curr_val[num]
+        #ну и сохраняем напоследок получившееся недоразумение
+        try:
+            name = self.context['name_cyrill'].split(' ')[0]
+            wb.save(fr"./drivers/{self.context['name_latin']}/Ходатайство о рег {name}.xlsx")
+            data['ogim_petition_number'] += 1
+            self.filepaths.append(fr"./drivers/{self.context['name_latin']}/Ходатайство о рег {name}.xlsx")
+            print(f"Создано ходатайство о регистрации на {self.context['name_latin']}")
+        except:
+            print('Я хз, что случилось, но случилось это при сохранении этого ебучего ходатайства в эксель', exc_info())
+
     def make_turkmenistan_invite(self):
         data = self.read_contracts_data()
         try:
@@ -167,6 +216,7 @@ class MakeDocs:
             self.make_contract(data)
             self.make_statement()
             self.make_notification()
+            self.make_dcm_petition(data)
             self.write_contracts_data(data)
             print('_______________________________________________')
             return True
@@ -185,12 +235,15 @@ class MakeDocs:
     def driver_exist(self):
         flag = []
         if self.context["name_latin"] in  os.listdir('drivers'):
+            print('Такой водитель есть')
             for file in os.listdir(f'drivers/{self.context["name_latin"]}'):
                 if file.endswith(f'{self.context["name_latin"]}.docx') and file.startswith('Трудовой договор'):
                     self.contract_filename = file
                     flag.append('Договор')
+                    print(f'Договор на {self.context["name_latin"]} есть')
                 if file.endswith(f'{self.context["name_latin"].split(" ")[0].upper()}.docx') and file.startswith('Ходатайство'):
                     self.petition_filename = file
+                    print(f'Ходатайство на {self.context["name_latin"]} есть')
                     flag.append('Ходатайство')
         if 'Договор' in flag and 'Ходатайство' in flag:
             print(f'Нашли в системе {self.context["name_latin"]}')

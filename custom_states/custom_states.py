@@ -19,8 +19,9 @@ class MyStates:
     telephone = 9
     contract_ends = 10
     dismissal = 11
-    make_it_cool = 12
-    zaebis = 13
+    ogim = 12
+    make_it_cool = 13
+    zaebis = 14
 
 
 
