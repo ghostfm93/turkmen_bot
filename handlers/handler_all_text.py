@@ -185,7 +185,7 @@ class HandlerAllText(Handler):
                     for filepath in docs.filepaths:
                         self.bot.send_document(message.chat.id, open(filepath, 'rb'), reply_markup=self.keyboards.info_menu())
                     user_states[message.chat.id] = None
-            elif user_data[message.chat.id]['choice'] == 'dismissal' and len(user_data[message.chat.id]) == 10 \
+            elif user_data[message.chat.id]['choice'] == 'dismissal' and len(user_data[message.chat.id]) == 9 \
                     and user_states[message.chat.id] == MyStates.zaebis:
                 print('Увольняем к хуям')
                 if docs.make_dismissal_notification():
